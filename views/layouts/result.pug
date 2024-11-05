@@ -1,0 +1,83 @@
+if result
+  h2 Материалы
+  table
+    thead
+      tr
+        th Наименование
+        th Количество
+        th Цена (руб.)
+        th Сумма (руб.)
+    tbody
+      each value, key in result["Материалы"]
+        tr
+          td #{key}
+          td #{value.count.toFixed(2)}
+          td #{value.cost.toFixed(2)}
+          td #{(value.count * value.cost).toFixed(2)}
+
+  h2 Раскрой
+  table
+    thead
+      tr
+        th Наименование
+        th Время (мин)
+        th Сумма (руб.)
+    tbody
+      each value, key in result["Раскрой"]
+        tr
+          td #{key}
+          td #{value.count.toFixed(2)}
+          td #{value.cost.toFixed(2)}
+
+  h2 Сборка
+  table
+    thead
+      tr
+        th Наименование
+        th Время (мин)
+        th Сумма (руб.)
+    tbody
+      each value, key in result["Сборка"]
+        tr
+          td #{key}
+          td #{value.count.toFixed(2)}
+          td #{value.cost.toFixed(2)}
+
+  if result["Дополнительно"]
+    h2 Дополнительно
+    table
+      thead
+        tr
+          th Наименование
+          th Количество
+          th Цена (руб.)
+          th Сумма (руб.)
+      tbody
+        each value, key in result["Дополнительно"]
+          tr
+            td #{key}
+            td #{value.count.toFixed(2)}
+            td #{value.cost.toFixed(2)}
+            td #{(value.count * value.cost).toFixed(2)}
+  .form-container
+    form(action=`/main/save/${current}` method="POST" class="calc-form")
+      .total-price
+        p Себестоимость: #{result.price.toFixed(2)} руб.
+        p Наценка:
+          input#markup(type="number" name="markup" value="2.4" min="1.5" step="0.01" style="width: 60px")
+        p Итоговая цена: 
+          span#total-price #{(result.price * 2.4).toFixed(2)} руб.
+      .form-group
+        label Комментарии:
+        textarea(name="comments" rows="4" cols="50" placeholder="Введите комментарий")
+      button(type="submit") Сохранить
+  script.
+    const price = #{result.price.toFixed(2)};
+    const markupInput = document.getElementById('markup');
+    const totalPriceElement = document.getElementById('total-price');
+    
+    markupInput.addEventListener('input', function() {
+      const markup = parseFloat(markupInput.value) || 0;
+      const totalPrice = price * markup
+      totalPriceElement.textContent = totalPrice.toFixed(2) + ' руб.';
+    });

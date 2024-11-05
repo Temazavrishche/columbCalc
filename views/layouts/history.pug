@@ -1,0 +1,222 @@
+if history
+  .block-history
+    h2 История расчетов
+    .card-container
+      each item, key in history
+        .card(onclick=`showModal('${key}')`)
+          .card-info
+            p Дата: #{new Date(item.meta.date).toLocaleString()}
+            p Цена: #{item.calcs.price.toFixed(2)} руб.
+            p Комментарий: #{item.comments || 'Нет комментариев'}
+            p Автор: #{item.meta.author}
+          form(action=`/main/del/${current}` method="POST" class="calc-form")
+            input(type="hidden" name="id" value=key)
+            button.delete-button(type="submit") Удалить
+
+.modal#calc-modal
+  .modal-content
+    span.close(onclick="closeModal()") &times;
+    h2 Полная информация о расчете
+    h3(id="modal-author") Автор:
+    h3(id="modal-date") Дата:
+
+    // Блок для отображения initialData
+    h2 Исходные данные для расчета
+    ul#initial-data-list
+
+    h2 Материалы
+    table
+      thead
+        tr
+          th Наименование
+          th Количество
+          th Цена (руб.)
+          th Сумма (руб.)
+      tbody#modal-materials
+    
+    h2 Раскрой
+    table
+      thead
+        tr
+          th Наименование
+          th Время (мин)
+          th Сумма (руб.)
+      tbody#modal-cutting
+    
+    h2 Сборка
+    table
+      thead
+        tr
+          th Наименование
+          th Время (мин)
+          th Сумма (руб.)
+      tbody#modal-assembly
+    div#modal-extra
+
+      
+    // Блок с расчетами и наценкой
+    .form-container
+      form(action=`/main/edit/${current}` method="POST" class="calc-form")
+          input(type="hidden" name="id" id="modal-id")
+          .total-price
+            p Себестоимость: <span id="modal-cost-price"></span> руб.
+            p Наценка:
+              input#modal-markup(type="number" name="markup" min="1.5" step="0.01" style="width: 60px")
+            p Итоговая цена: 
+              span#modal-total-price 0 руб.
+          .form-group
+            label Комментарии:
+            textarea(name="comments" rows="4" cols="50" id="modal-comments" placeholder="Введите комментарий")
+          button(type="submit") Сохранить      
+    
+
+// Встроенный JavaScript
+script.
+  const historyData = !{JSON.stringify(history)};
+
+  // Переводы для initialData
+  const initialDataTranslations = {
+    diameter: 'Диаметр',
+    length: 'Длина',
+    width: "Ширина",
+    height: "Высота",
+    rollWidth: 'Ширина рулона',
+    partitions: 'Перегородки',
+    shape: 'Форма',
+    fabric: 'Ткань',
+    reinforcement: 'Усиление',
+    mounting: 'Крепления',
+    straightLength: "Длина прямого учатска,мм",
+    lengthWithRadius: "Длина участка с радиусом,мм",
+    fromCenterToTurn: "Расстояние от центра до точки начала поворота",
+    fromCenterToEnd: "Расстояние от центра до конца фальшборта",
+    addPartitions: "Доп перегородки,шт",
+    straightLength: "Длина прямого учатска,мм",
+    straightLength: "Длина прямого учатска,мм",
+  };
+
+  function showModal(key) {
+    const item = historyData[key];
+    if (item) {
+      // Заполняем автор и дату
+      document.getElementById('modal-author').textContent = `Автор: ${item.meta.author}`;
+      document.getElementById('modal-date').textContent = `Дата: ${new Date(item.meta.date).toLocaleString()}`;
+      
+      // Заполняем данные из initialData
+      const initialDataList = document.getElementById('initial-data-list');
+      initialDataList.innerHTML = '';  // Очищаем текущие данные
+      for (let param in item.initialData) {
+        const translatedName = initialDataTranslations[param] || param;  // Используем перевод или оставляем оригинал
+        initialDataList.innerHTML += `
+          <li>${translatedName}: ${item.initialData[param]}</li>`;
+      }
+
+      // Заполняем таблицу Материалы
+      const materialsTbody = document.getElementById('modal-materials');
+      materialsTbody.innerHTML = '';
+      for (let material in item.calcs["Материалы"]) {
+        const materialData = item.calcs["Материалы"][material];
+        materialsTbody.innerHTML += `
+          <tr>
+            <td>${material}</td>
+            <td>${materialData.count.toFixed(2)}</td>
+            <td>${materialData.cost.toFixed(2)}</td>
+            <td>${(materialData.count * materialData.cost).toFixed(2)}</td>
+          </tr>`;
+      }
+      
+      // Заполняем таблицу Раскрой
+      const cuttingTbody = document.getElementById('modal-cutting');
+      cuttingTbody.innerHTML = '';
+      for (let cutting in item.calcs["Раскрой"]) {
+        const cuttingData = item.calcs["Раскрой"][cutting];
+        cuttingTbody.innerHTML += `
+          <tr>
+            <td>${cutting}</td>
+            <td>${cuttingData.count.toFixed(2)}</td>
+            <td>${cuttingData.cost.toFixed(2)}</td>
+          </tr>`;
+      }
+
+      // Заполняем таблицу Сборка
+      const assemblyTbody = document.getElementById('modal-assembly');
+      assemblyTbody.innerHTML = '';
+      for (let assembly in item.calcs["Сборка"]) {
+        const assemblyData = item.calcs["Сборка"][assembly];
+        assemblyTbody.innerHTML += `
+          <tr>
+            <td>${assembly}</td>
+            <td>${assemblyData.count.toFixed(2)}</td>
+            <td>${assemblyData.cost.toFixed(2)}</td>
+          </tr>`;
+      }
+
+      // Проверяем наличие раздела "Дополнительно"
+      const extraSection = document.getElementById('modal-extra');
+      
+      // Проверяем, есть ли данные в разделе "Дополнительно"
+      if (item.calcs["Дополнительно"]) {
+        // Создаем заголовок и таблицу только если есть данные
+        extraSection.innerHTML = `
+          <h2>Дополнительно</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Наименование</th>
+                <th>Количество</th>
+                <th>Сумма (руб.)</th>
+              </tr>
+            </thead>
+            <tbody id="modal-extra-body"></tbody>
+          </table>
+        `;
+        const extraTbody = document.getElementById('modal-extra-body');
+        // Заполняем таблицу данными
+        for (let extra in item.calcs["Дополнительно"]) {
+          const extraData = item.calcs["Дополнительно"][extra];
+          extraTbody.innerHTML += 
+            `<tr>
+              <td>${extra}</td>
+              <td>${extraData.count.toFixed(2)}</td>
+              <td>${extraData.cost.toFixed(2)}</td>
+            </tr>`;
+        }
+      } else {
+        // Если раздела нет, скрываем секцию "Дополнительно"
+        extraSection.innerHTML = ''; // Очищаем содержимое
+      }
+
+      // Заполняем себестоимость и наценку
+      const costPrice = item.calcs.price.toFixed(2);
+      const markupInput = document.getElementById('modal-markup');
+      const totalPriceElement = document.getElementById('modal-total-price');
+      const comments = document.getElementById('modal-comments');
+      const id = document.getElementById('modal-id');
+      id.value = key
+      comments.value = item.comments
+      document.getElementById('modal-cost-price').textContent = costPrice;
+      markupInput.value = item.markup || 2.4;
+
+      function updateTotalPrice() {
+        const markup = parseFloat(markupInput.value) || 0;
+        const totalPrice = costPrice * markup;
+        totalPriceElement.textContent = totalPrice.toFixed(2) + ' руб.';
+      }
+
+      markupInput.addEventListener('input', updateTotalPrice);
+      updateTotalPrice();
+
+      document.getElementById('calc-modal').style.display = 'flex';
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('calc-modal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('calc-modal');
+    if (event.target === modal) {
+      closeModal();
+    }
+  }

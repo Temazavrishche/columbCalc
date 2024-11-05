@@ -1,0 +1,33 @@
+extends ../layouts/main
+
+block fbort
+    .form-container
+        form(action="/main/fbort" method="POST" class="calc-form")
+            .form-group
+                label Длина прямого учатска, мм:
+                input(type="text" name="straightLength" placeholder="Длина прямого учатска, мм" value=last.straightLength required)
+            .form-group
+                label Длина участка с радиусом, мм:
+                input(type="text" name="lengthWithRadius" placeholder="Длина участка с радиусом, мм" value=last.lengthWithRadius required)
+            .form-group
+                label Диаметр, мм:
+                input(type="text" name="diameter" placeholder="Диаметр, мм" value=last.diameter required)
+            .form-group
+                label От центра до точки начала поворота, мм:
+                input(type="text" name="fromCenterToTurn" placeholder="От центра до точки начала поворота, мм" value=last.fromCenterToTurn required)
+            .form-group
+                label От центра до конца фальшборта, мм:
+                input(type="text" name="fromCenterToEnd" placeholder="От центра до конца фальшборта, мм" value=last.fromCenterToEnd required)
+            .form-group
+                label Ширина рулона, мм:
+                input(type="text" name="rollWidth" placeholder="Ширина рулона, мм" value=last.rollWidth required)
+            .form-group
+                label Кол-во доп перегородок,шт:
+                input(type="text" name="addPartitions" placeholder="Кол-во доп перегородок,шт" value=last.addPartitions required)
+            .form-group
+                label Ткань:
+                select(name="fabric" required)
+                    option(value="650" selected=(last.fabric == 650)) 650 г/м2
+                    option(value="850" selected=(last.fabric == 850)) 850 г/м2
+                    option(value="1100" selected=(last.fabric == 1100)) 1100 г/м2
+            button(type="submit") Рассчитать

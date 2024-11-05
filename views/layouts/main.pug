@@ -1,0 +1,28 @@
+doctype html
+html(lang="ru")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet" href="/styles/main.css")
+    title Columb-calcs
+  body
+    main.container
+      .side-menu
+        ul
+          if sideMenu.length === 0
+            p Пока пусто
+          else 
+            each item in sideMenu
+              li
+                button.side-menu-list-item-btn(class=(item.filename === current ? 'active' : ''))
+                  a(href=`/main/${item.filename}`)= item.title
+      .content-wrapper
+        .main-content
+          block ballons
+          block mattress
+          block fbort
+        .result-history
+          .result
+            include result
+          .history
+            include history

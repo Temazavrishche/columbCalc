@@ -1,0 +1,24 @@
+extends ../layouts/main
+
+block mattress
+    .form-container
+        form(action="/main/mattress" method="POST" class="calc-form")
+            .form-group
+                label Длина, мм:
+                input(type="text" name="length" placeholder="Длина, мм" value=last.length required)
+            .form-group
+                label Ширина, мм:
+                input(type="text" name="width" placeholder="Ширина, мм" value=last.width required)
+            .form-group
+                label Высота, мм:
+                input(type="text" name="height" placeholder="Высота, мм" value=last.height required)
+            //.form-group
+                label Кол-во доп перегородок,шт:
+                input(type="text" name="addPartitions" placeholder="Кол-во доп перегородок,шт" required)
+            .form-group
+                label Ткань:
+                select(name="fabric" required)
+                    option(value="650" selected=(last.fabric == 650)) 650 г/м2
+                    option(value="850" selected=(last.fabric == 850)) 850 г/м2
+                    option(value="1100" selected=(last.fabric == 1100)) 1100 г/м2
+            button(type="submit") Рассчитать

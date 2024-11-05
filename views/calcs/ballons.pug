@@ -1,0 +1,44 @@
+extends ../layouts/main
+
+block ballons
+    .form-container
+        form(action="/main/ballons" method="POST" class="calc-form")
+            .form-group
+                label Диаметр, мм:
+                input(type="text" name="diameter" placeholder="Диаметр, мм" value=last.diameter required)
+            .form-group
+                label Длина баллона, мм:
+                input(type="text" name="length" placeholder="Длина баллона, мм" value=last.length required)
+            .form-group
+                label Ширина рулона, мм:
+                input(type="text" name="rollWidth" placeholder="Ширина рулона, мм" value=last.rollWidth required)
+            .form-group
+                label Кол-во перегородок, шт:
+                input(type="text" name="partitions" placeholder="Кол-во перегородок, шт" value=last.partitions required)
+            .form-group
+                label Форма баллона:
+                input(type="number" min="1" max="6" name="shape" placeholder="Форма баллона" value=last.shape required)
+            .form-group
+                label Ткань:
+                select(name="fabric" required)
+                    option(value="400" selected=(last.fabric == 400)) 400 г/м2
+                    option(value="650" selected=(last.fabric == 650)) 650 г/м2
+                    option(value="850" selected=(last.fabric == 850)) 850 г/м2
+                    option(value="1100" selected=(last.fabric == 1100)) 1100 г/м2
+            .form-group
+                label Усиление:
+                select(name="reinforcement" required)
+                    option(value="none" selected=(last.reinforcement == "none")) Без усиления
+                    option(value="23,5" selected=(last.reinforcement == "23,5")) Привальный брус 23,5 см
+                    option(value="12" selected=(last.reinforcement == 12)) Привальный брус 12 см
+                    option(value="9" selected=(last.reinforcement == 9)) Привальный брус 9 см
+                    option(value="6" selected=(last.reinforcement == 6)) Привальный брус 6 см
+                    option(value="fabric" selected=(last.reinforcement == "fabric")) Тканью
+            .form-group
+                label Крепление:
+                select(name="mounting" required)
+                    option(value="none" selected=(last.mounting == "none")) Без крепления
+                    option(value="tape" selected=(last.mounting == "tape")) Люверсная лента
+                    option(value="pocket" selected=(last.mounting == "pocket")) Карманы 40х14
+            button(type="submit") Рассчитать
+        img(src=img alt="Формы баллонов")

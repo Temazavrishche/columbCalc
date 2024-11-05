@@ -1,0 +1,396 @@
+body {
+  background-color: #333;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  color: #fff;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.side-menu {
+  width: 15vw;
+  border-right: #fff solid 2px;
+  text-align: center;
+  padding: 10px 0;
+  box-sizing: border-box;
+}
+
+.side-menu ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.side-menu li {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.side-menu li::after {
+  content: "";
+  display: block;
+  width: 50%;
+  height: 1px;
+  background-color: #fff;
+  margin: 8px auto;
+}
+
+button {
+  font-size: inherit;
+  margin: 8px auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.side-menu-list-item-btn {
+  width: 100%;
+  color: inherit;
+  padding: 0;
+  border: 1px solid #333;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.side-menu-list-item-btn.active {
+  background-color: #444;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 4px;
+  transition: background-color 0.3s, border 0.3s;
+}
+
+.side-menu-list-item-btn:hover {
+  border-radius: 10px;
+  background-color: #666;
+  border: 1px solid #fff;
+}
+
+.side-menu-list-item-btn a {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.content-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
+  align-items: flex-start; /* Выравнивание контента в начале для избежания лишней высоты */
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto; /* Установка высоты в зависимости от содержимого */
+}
+
+.form-container {
+  display: flex;
+  gap: 20px;
+  height: auto;
+  align-items: flex-start;
+}
+
+.form-container img {
+  width: 50%; /* Установите относительный размер изображения */
+  height: auto;
+  max-width: 400px; /* Ограничение максимальной ширины для предотвращения слишком большого размера */
+  object-fit: contain; /* Подгонка изображения по контейнеру */
+  margin-left: 20px;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  .form-container img {
+    width: 100%; /* Устанавливаем ширину в 100% для мобильных устройств */
+    max-width: none; /* Снимаем ограничение */
+    margin-left: 0;
+  }
+}
+
+.calc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: max-content;
+  padding: 20px;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group label {
+  font-size: 16px;
+  white-space: nowrap;
+  width: 300px;
+  text-align: left;
+}
+
+input,
+select {
+  padding: 4px;
+  font-size: 14px;
+  width: 200px;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+button:hover {
+  border-radius: 10px;
+  background-color: #666;
+  border: 1px solid #fff;
+}
+
+.form-container img {
+  max-width: 100%;
+  height: auto;
+  margin-top: 20px;
+}
+
+.result table {
+  width: 100%; /* Уменьшаем ширину таблицы до 90% */
+  border-collapse: collapse; /* Убираем пробелы между ячейками */
+  margin-top: 20px; /* Отступ сверху от предыдущего элемента */
+}
+
+.result {
+  flex: 1; /* Результат занимает 50% ширины */
+}
+
+.result th, td {
+  border: 1px solid #fff; /* Белая граница для ячеек */
+  padding: 8px; /* Уменьшаем отступ внутри ячеек */
+  text-align: left; /* Выравнивание текста по левому краю */
+  font-size: 14px; /* Уменьшаем размер шрифта для ячеек */
+}
+
+.result th {
+  background-color: #444; /* Темный фон для заголовков */
+  color: #fff; /* Белый цвет текста для заголовков */
+  font-weight: bold; /* Жирный текст для заголовков */
+}
+
+.result tbody tr:hover {
+  background-color: #666; /* Подсветка строки при наведении */
+}
+
+.result h2 {
+  margin-top: 30px; /* Отступ сверху от заголовков секций */
+  margin-bottom: 10px; /* Отступ снизу от заголовков секций */
+  font-size: 20px; /* Уменьшаем размер шрифта заголовков */
+  color: #fff; /* Цвет текста заголовков */
+}
+
+.result-history {
+  display: flex; /* Включаем flexbox для горизонтального расположения */
+  width: 100%; /* Блоки занимают всю ширину родителя */
+  gap: 20px; /* Пробел между блоками */
+  padding: 20px 0; /* Отступы сверху и снизу */
+}
+
+.history {
+  flex: 1; /* История также занимает 50% ширины */
+  padding-left: 20px; /* Отступ слева для отделения от результатов */
+  border-left: 1px solid #fff; /* Разделительная линия между результатом и историей */
+  color: white; /* Цвет текста */
+}
+
+textarea {
+  resize: both; /* Позволяет изменять размер как по горизонтали, так и по вертикали */
+  max-width: 400px; /* Максимальная ширина, можно задать любое значение, например, 500px */
+  max-height: 300px; /* Максимальная высота */
+  min-height: 50px; /* Минимальная высота для удобства */
+  width: 100%; /* Ширина по умолчанию */
+  padding: 10px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.total-price {
+  display: flex;
+  align-items: center; /* Центрирование по вертикали */
+  gap: 15px; /* Пробел между элементами */
+}
+.card-container {
+  max-height: 1000px; /* Максимальная высота для контейнера */
+  overflow-y: auto; /* Добавление вертикальной прокрутки, если контент превышает высоту контейнера */
+  padding: 10px; /* Отступ внутри контейнера */
+  border: 1px solid #fff; /* Граница для визуального отделения */
+  border-radius: 5px; /* Закругленные углы */
+  background-color: #333; /* Темный фон для контейнера */
+}
+
+
+.card {
+  background-color: #444; /* Темный фон карточек */
+  border: 1px solid #666; /* Граница карточек */
+  border-radius: 5px; /* Закругленные углы */
+  padding: 15px; /* Отступ внутри карточки */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Легкая тень для объема */
+  display: flex; /* Flexbox для внутреннего расположения */
+  flex-direction: column; /* Вертикальное расположение содержимого */
+  justify-content: space-between; /* Пространство между элементами */
+  cursor: pointer; /* Указатель курсора при наведении */
+  transition: background-color 0.3s, transform 0.2s; /* Плавный переход при наведении */
+  overflow: hidden; /* Обрезка содержимого, выходящего за пределы */
+  max-width: 640px; /* Установка максимальной ширины */
+  width: 100%; /* Установка ширины карточки на 100% родителя */
+}
+
+.card:hover {
+  background-color: #555; /* Изменение фона при наведении */
+  transform: translateY(-2px); /* Легкий подъем при наведении */
+}
+
+.card-info {
+  flex-grow: 1; /* Занять оставшееся пространство */
+}
+
+.card h3 {
+  font-size: 18px; /* Размер заголовка */
+  margin: 0; /* Убираем отступы */
+}
+
+.card p {
+  margin: 5px 0; /* Отступы между параграфами */
+  font-size: 14px; /* Размер текста */
+  overflow: hidden; /* Обрезка текста */
+  text-overflow: ellipsis; /* Добавление многоточия в конце обрезанного текста */
+  white-space: nowrap; /* Запрет на перенос строк */
+}
+
+.delete-button {
+  background-color: #e74c3c; /* Красный фон для кнопки удаления */
+  color: #fff; /* Белый текст для кнопки */
+  border: none; /* Убираем границу */
+  border-radius: 4px; /* Закругленные углы */
+  padding: 8px; /* Отступ внутри кнопки */
+  cursor: pointer; /* Указатель курсора при наведении */
+  transition: background-color 0.3s; /* Плавный переход при наведении */
+}
+
+.delete-button:hover {
+  background-color: #c0392b; /* Более темный красный при наведении */
+}
+
+.card-details {
+  display: none; /* Скрываем детали по умолчанию */
+  position: fixed; /* Фиксируем детали на экране */
+  top: 0;
+  left: 0;
+  width: 100%; /* На всю ширину */
+  height: 100%; /* На всю высоту */
+  background-color: rgba(0, 0, 0, 0.8); /* Полупрозрачный фон */
+  color: #fff; /* Белый текст */
+  padding: 20px; /* Отступы */
+  box-sizing: border-box; /* Учитываем отступы в размерах */
+  z-index: 1000; /* На верхнем уровне */
+}
+
+.card-details .close-button {
+  position: absolute; /* Абсолютное позиционирование для кнопки закрытия */
+  top: 20px;
+  right: 20px;
+  background-color: transparent; /* Прозрачный фон для кнопки */
+  color: #fff; /* Белый текст */
+  border: none; /* Убираем границу */
+  font-size: 20px; /* Размер текста */
+  cursor: pointer; /* Указатель курсора при наведении */
+}
+
+.modal {
+  display: none; /* Скрываем по умолчанию */
+  position: fixed; /* Фиксированное позиционирование */
+  top: 0; /* Прикрепляем к верхней части экрана */
+  left: 0; /* Прикрепляем к левому краю экрана */
+  width: 100%; /* Занимаем всю ширину экрана */
+  height: 100%; /* Занимаем всю высоту экрана */
+  background-color: rgba(0, 0, 0, 0.8); /* Полупрозрачный фон */
+  z-index: 1000; /* На верхнем уровне */
+  display: none; /* Используем flexbox для центрирования содержимого */
+  justify-content: center; /* Центрируем по горизонтали */
+  align-items: center; /* Центрируем по вертикали */
+}
+
+.modal-content {
+  background-color: #444; /* Темный фон для содержимого модального окна */
+  border-radius: 5px; /* Закругленные углы */
+  padding: 20px; /* Отступы внутри модального окна */
+  max-width: 90%; /* Максимальная ширина окна */
+  max-height: 90%; /* Максимальная высота окна */
+  overflow-y: auto; /* Добавляем вертикальную прокрутку, если содержимое превышает высоту */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); /* Легкая тень для объема */
+}
+
+.close {
+  cursor: pointer; /* Указатель курсора при наведении */
+  color: #fff; /* Белый цвет для кнопки закрытия */
+  font-size: 24px; /* Размер текста для кнопки */
+  position: absolute; /* Абсолютное позиционирование для кнопки */
+  top: 20px; /* Расположение сверху */
+  right: 20px; /* Расположение справа */
+  transition: color 0.3s; /* Плавный переход цвета */
+}
+
+.close:hover {
+  color: #e74c3c; /* Цвет при наведении */
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 95%; /* Увеличиваем максимальную ширину для мобильных устройств */
+    padding: 15px; /* Уменьшаем отступы внутри модального окна */
+  }
+}
+
+.modal-content table {
+  width: 100%; /* Устанавливаем ширину таблицы на 100% */
+  border-collapse: collapse; /* Убираем пробелы между ячейками */
+}
+
+.modal-content th, .modal-content td {
+  border: 1px solid #fff; /* Белая граница для ячеек */
+  padding: 8px; /* Отступы внутри ячеек */
+  text-align: left; /* Выравнивание текста по левому краю */
+  font-size: 14px; /* Размер шрифта для ячеек */
+}
+
+.modal-content th {
+  background-color: #444; /* Темный фон для заголовков */
+  color: #fff; /* Белый цвет текста для заголовков */
+  font-weight: bold; /* Жирный текст для заголовков */
+}
+
+.modal-content tbody tr:hover {
+  background-color: #666; /* Подсветка строки при наведении */
+}
