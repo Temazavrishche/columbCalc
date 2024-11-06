@@ -55,8 +55,9 @@ users.forEach(user => {
 });
 const app = express();
 
-const PORT = 80;
+const PORT = 8089;
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url}`); // Логирование метода и URL
@@ -97,8 +98,8 @@ app.post('/login', async(req, res) => {
     }
 })
 app.post('/selfcostupdate', async(req, res) => {
-    selfcost = req.data
-    res.send(200)
+    selfcost = req.body
+    res.sendStatus(200)
 })
 app.use(authenticate)
 app.get('/main', (req, res) => {
