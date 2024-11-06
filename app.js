@@ -21,7 +21,7 @@ let [users, history, sideMenu] = await Promise.all([
 ]);
 let selfcost
 await axios.get('https://script.google.com/macros/s/AKfycbzYqyd5HrOxJOwdyZTsQMT1GrPIXG2qbeEKpnj5Ll5oLPonF382DExv2Gd04LdXhMeVEg/exec').then(req =>{selfcost = req.data}).catch(error => {logger.error(`Error: ${error}`)})
-
+console.log('self')
 const lastUserProps = {}
 users.forEach(user => {
     lastUserProps[user.id] = {
@@ -59,10 +59,6 @@ const PORT = 8089;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
-app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.url}`); // Логирование метода и URL
-    next();
-});
 app.use((err, req, res, next) => {
     logger.error(`Error: ${err.message}`); // Логирование ошибок
     res.status(500).send('Something broke!');
@@ -102,6 +98,10 @@ app.post('/selfcostupdate', async(req, res) => {
     res.sendStatus(200)
 })
 app.use(authenticate)
+app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url} ${req.session.userId}`); // Логирование метода и URL
+    next();
+});
 app.get('/main', (req, res) => {
     res.render('layouts/main', {sideMenu})
 })
