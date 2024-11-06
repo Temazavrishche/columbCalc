@@ -95,7 +95,11 @@ app.post('/login', async(req, res) => {
     }else {
         res.render('layouts/index', {username, error: true});
     }
-});
+})
+app.post('/selfcostupdate', async(req, res) => {
+    selfcost = req.data
+    res.send(200)
+})
 app.use(authenticate)
 app.get('/main', (req, res) => {
     res.render('layouts/main', {sideMenu})
