@@ -3,15 +3,13 @@ if history
     h2 История расчетов
     .card-container
       each item, key in history
-        .card(onclick=`showModal('${key}')`)
+        .card(onclick=`showModal('${key}')`, id=key)
           .card-info
             p Дата: #{new Date(item.meta.date).toLocaleString()}
-            p Цена: #{item.calcs.price.toFixed(2)} руб.
+            p Цена: #{(item.calcs.price * item.markup).toFixed(2)} руб.
             p Комментарий: #{item.comments || 'Нет комментариев'}
             p Автор: #{item.meta.author}
-          form(action=`/main/del/${current}` method="POST" class="calc-form")
-            input(type="hidden" name="id" value=key)
-            button.delete-button(type="submit") Удалить
+            button.delete-button(onclick=`deleteNote('${key}', event)`) Удалить
 
 .modal#calc-modal
   .modal-content
@@ -73,7 +71,7 @@ if history
 // Встроенный JavaScript
 script.
   const historyData = !{JSON.stringify(history)};
-
+  const currentPage = "#{current}"
   // Переводы для initialData
   const initialDataTranslations = {
     diameter: 'Диаметр',
@@ -93,8 +91,20 @@ script.
     addPartitions: "Доп перегородки,шт",
     straightLength: "Длина прямого учатска,мм",
     straightLength: "Длина прямого учатска,мм",
-  };
-
+  }
+  function deleteNote(key, event){
+    event.preventDefault()
+    event.stopPropagation()
+    fetch(`/main/del/${currentPage}`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        id: key // Идентификатор для удаления
+    })
+  }).then(document.getElementById(key).remove())
+  }
   function showModal(key) {
     const item = historyData[key];
     if (item) {
