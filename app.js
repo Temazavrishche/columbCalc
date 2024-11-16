@@ -31,7 +31,7 @@ app.use(session({
     secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 500000}
+    cookie: { maxAge: 86400000}
 }));
 
 app.set('view engine', 'pug')
