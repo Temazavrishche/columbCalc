@@ -1,15 +1,15 @@
-if history
+if history && history.length > 0
   .block-history
     h2 История расчетов
     .card-container
-      each item, key in history
-        .card(onclick=`showModal('${key}')`, id=key)
+      each item in history
+        .card(onclick=`showModal('${item.id}')`, id=item.id)
           .card-info
-            p Дата: #{new Date(item.meta.date).toLocaleString()}
+            p Дата: #{new Date(item.createdAt).toLocaleString()}
             p Цена: #{(item.calcs.price * item.markup).toFixed(2)} руб.
             p Комментарий: #{item.comments || 'Нет комментариев'}
-            p Автор: #{item.meta.author}
-            button.delete-button(onclick=`deleteNote('${key}', event)`) Удалить
+            p Автор: #{item.author}
+            button.delete-button(onclick=`deleteNote('${item.id}', event)`) Удалить
 
 .modal#calc-modal
   .modal-content
@@ -51,7 +51,6 @@ if history
       tbody#modal-assembly
     div#modal-extra
 
-      
     // Блок с расчетами и наценкой
     .form-container
       form(action=`/main/edit/${current}` method="POST" class="calc-form")
@@ -65,16 +64,14 @@ if history
           .form-group
             label Комментарии:
             textarea(name="comments" rows="4" cols="50" id="modal-comments" placeholder="Введите комментарий")
-          button(type="submit") Сохранить      
-    
-
-// Встроенный JavaScript
+          button(type="submit") Сохранить
 script.
   const historyData = !{JSON.stringify(history)};
-  const currentPage = "#{current}"
+  const currentPage = "#{current}";
+
   // Переводы для initialData
   const initialDataTranslations = {
-    diameter: 'Диаметр',
+    diameter: "Диаметр",
     length: 'Длина',
     width: "Ширина",
     height: "Высота",
@@ -84,33 +81,33 @@ script.
     fabric: 'Ткань',
     reinforcement: 'Усиление',
     mounting: 'Крепления',
-    straightLength: "Длина прямого учатска,мм",
-    lengthWithRadius: "Длина участка с радиусом,мм",
+    straightLength: "Длина прямого участка, мм",
+    lengthWithRadius: "Длина участка с радиусом, мм",
     fromCenterToTurn: "Расстояние от центра до точки начала поворота",
     fromCenterToEnd: "Расстояние от центра до конца фальшборта",
-    addPartitions: "Доп перегородки,шт",
-    straightLength: "Длина прямого учатска,мм",
-    straightLength: "Длина прямого учатска,мм",
-  }
-  function deleteNote(key, event){
-    event.preventDefault()
-    event.stopPropagation()
+    addPartitions: "Доп перегородки, шт",
+  };
+
+  function deleteNote(key, event) {
+    event.preventDefault();
+    event.stopPropagation();
     fetch(`/main/del/${currentPage}`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        id: key // Идентификатор для удаления
-    })
-  }).then(document.getElementById(key).remove())
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: key, // Идентификатор для удаления
+      }),
+    }).then(() => document.getElementById(key).remove());
   }
+
   function showModal(key) {
-    const item = historyData[key];
+    const item = historyData.find((i) => i.id == key); // Находим объект по id
     if (item) {
       // Заполняем автор и дату
-      document.getElementById('modal-author').textContent = `Автор: ${item.meta.author}`;
-      document.getElementById('modal-date').textContent = `Дата: ${new Date(item.meta.date).toLocaleString()}`;
+      document.getElementById('modal-author').textContent = `Автор: ${item.author}`;
+      document.getElementById('modal-date').textContent = `Дата: ${new Date(item.createdAt).toLocaleString()}`;
       
       // Заполняем данные из initialData
       const initialDataList = document.getElementById('initial-data-list');
@@ -164,9 +161,7 @@ script.
       // Проверяем наличие раздела "Дополнительно"
       const extraSection = document.getElementById('modal-extra');
       
-      // Проверяем, есть ли данные в разделе "Дополнительно"
       if (item.calcs["Дополнительно"]) {
-        // Создаем заголовок и таблицу только если есть данные
         extraSection.innerHTML = `
           <h2>Дополнительно</h2>
           <table>
@@ -181,19 +176,17 @@ script.
           </table>
         `;
         const extraTbody = document.getElementById('modal-extra-body');
-        // Заполняем таблицу данными
         for (let extra in item.calcs["Дополнительно"]) {
           const extraData = item.calcs["Дополнительно"][extra];
-          extraTbody.innerHTML += 
-            `<tr>
+          extraTbody.innerHTML += `
+            <tr>
               <td>${extra}</td>
               <td>${extraData.count.toFixed(2)}</td>
               <td>${extraData.cost.toFixed(2)}</td>
             </tr>`;
         }
       } else {
-        // Если раздела нет, скрываем секцию "Дополнительно"
-        extraSection.innerHTML = ''; // Очищаем содержимое
+        extraSection.innerHTML = ''; // Очищаем содержимое, если нет данных
       }
 
       // Заполняем себестоимость и наценку
@@ -202,8 +195,8 @@ script.
       const totalPriceElement = document.getElementById('modal-total-price');
       const comments = document.getElementById('modal-comments');
       const id = document.getElementById('modal-id');
-      id.value = key
-      comments.value = item.comments
+      id.value = key;
+      comments.value = item.comments;
       document.getElementById('modal-cost-price').textContent = costPrice;
       markupInput.value = item.markup || 2.4;
 
@@ -229,4 +222,4 @@ script.
     if (event.target === modal) {
       closeModal();
     }
-  }
+  };

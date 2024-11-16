@@ -2,7 +2,9 @@ import { ballons } from './ballons.js'
 import { mattress } from './mattress.js'
 import { fbort } from './fbort.js'
 import axios from "axios"
-import fs from 'fs'
+import { History, UserProps } from '../db/db.js'
+import logger from '../logger.js'
+import { redisClient } from '../app.js'
 const defaulProps = {
     ballons: {
         diameter: 600,
@@ -38,74 +40,118 @@ const calcs = {
 }
 export class Calculator{
     constructor(){
-        this.userprops = {}
         this.updateSelfcost()
-        this.loadHistory()
     }
     async updateSelfcost(req = false, res = false){
         this.selfcost = req.body || await axios.get(process.env.SELFCOSTURL).then(res => res.data).catch(error => console.log(error))
+        console.log('selfcost loaded')
         res && res.sendStatus(200)
     }
-    calculate(req){
+    async calculate(req){
         const type = req.params.calc
-        const userId = req.session.userId
-        return calcs[type](this.getUserProps(userId,type),this.selfcost)
+        return calcs[type](await this.getUserProps(req.session.username,type),this.selfcost)
     }
-    updateUserProps(req, res){
-        const type = req.params.calc
-        const userId = req.session.userId
-        this.userprops[userId] ? false : this.userprops[userId] = {}
-        this.userprops[userId][type] = req.body
+    async updateUserProps(req, res){
+        try{
+            await redisClient.setEx(`${req.session.username}:${req.params.calc}`, 3600, JSON.stringify(req.body));
+            await UserProps.upsert({
+                type: req.params.calc,
+                user: req.session.username,
+                props: req.body,
+              })
+        }catch (error){
+            console.error('Ошибка при сохранении в бд UserProps: ', error)
+            logger.error(`Error: ${error}`)
+        }
         res.redirect(`/main/${req.params.calc}`)
     }
-    getUserProps(userId, type){
-        return this.userprops[userId]?.[type] || defaulProps[type]
+    async getUserProps(user, type) {
+        try {
+            const data = await redisClient.get(`${user}:${type}`);
+            
+            if (data !== null) {
+                return JSON.parse(data)
+            } else {
+                const userProps = await UserProps.findOne({
+                    where: { user, type }
+                });
+                await redisClient.setEx(`${user}:${type}`, 3600, JSON.stringify(userProps.props));
+                return userProps.props || defaulProps[type];
+            }
+        } catch (error) {
+            console.error('Ошибка при получении UserProps:', error);
+            logger.error(`Error: ${error}`);
+            return defaulProps[type];
+        }
     }
-    async saveHistory(req = false, res, redir){
-        if(req){
-            const dataForSave = {
-                initialData: this.getUserProps(req.session.userId, req.params.calc),
-                calcs: this.calculate(req),
+    
+    
+    async saveHistory(req, res){
+        try {
+            await History.create({
+                type: req.params.calc,
+                calcs: await this.calculate(req),
                 markup: req.body.markup,
                 comments: req.body.comments,
-                meta: { author: req.session.username,
-                        date: new Date()
-                }
-            }
-            this.history[req.params.calc][++this.history.id] = dataForSave
-        }
-        try {
-            await fs.promises.writeFile('./calcs/history.json', JSON.stringify(this.history, null, 2));
+                author: req.session.username
+            })
         }catch (error){
-            console.error('Ошибка при сохранении history.json:', error);
+            console.error('Ошибка при сохранении в бд History: ', error)
+            logger.error(`Error: ${error}`)
         }
-        req && res.redirect(`/main/${req.params.calc}`)
-    }
-    async loadHistory(){
-        try{
-            this.history = await fs.promises.readFile('./calcs/history.json', 'utf8').then(JSON.parse)
-        }catch (error){
-            console.error('Ошибка при загрузке history.json:', error)
-        }
-    }
-    async deleteHistory(req){
-        delete this.history[req.params.calc][req.body.id]
-        await this.saveHistory()
-    }
-    async editHistory(req, res){
-        this.history[req.params.calc][req.body.id].comments = req.body.comments
-        this.history[req.params.calc][req.body.id].markup = req.body.markup
-        await this.saveHistory()
         res.redirect(`/main/${req.params.calc}`)
     }
-    renderCalcs = (req,res, sideMenu) =>{
+    async deleteHistory(req, res){
+        try{
+            await History.destroy({
+                where: {
+                    id: req.body.id
+                }
+            })
+            res.sendStatus(200)
+        }catch (error){
+            console.error('Ошибка при удалении записи в бд History: ', error)
+            logger.error(`Error: ${error}`)
+            res.redirect(`/main/${req.params.calc}`)
+        }
+    }
+    async editHistory(req, res){
+        try{
+            await History.update({
+                comments: req.body.comments,
+                markup: req.body.markup
+                },{
+                    where: {
+                        id: req.body.id
+                    }
+                }
+            )
+            res.redirect(`/main/${req.params.calc}`)
+        }catch(error){
+            console.error('Ошибка при обновлении записи в бд History: ', error)
+            logger.error(`Error: ${error}`)
+            res.redirect(`/main/${req.params.calc}`)
+        }
+    }
+    async renderCalcs(req, res, sideMenu){
+        let allHistory
+        try{
+            const history = await History.findAll({
+                where: {
+                    type: req.params.calc
+                }
+            })
+            allHistory = history.map(item => item.toJSON())
+        }catch{
+            allHistory = []
+        }
         const commonArgs = {
             img: `../img/${req.params.calc}.png`,
             sideMenu,
             current: req.params.calc,
-            last: this.getUserProps(req.session.userId, req.params.calc),
-            history: this.history[req.params.calc]
+            last: await this.getUserProps(req.session.username, req.params.calc),
+            history: allHistory
         }
-        res.render(`calcs/${req.params.calc}`, {...commonArgs, ...{result: this.calculate(req, res)}});
+        res.render(`calcs/${req.params.calc}`, {...commonArgs, ...{result: await this.calculate(req)}});
     }
 }

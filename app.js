@@ -1,17 +1,15 @@
 import express from 'express'
 import session  from 'express-session'
 import bodyParser  from 'body-parser'
-import fs from 'fs'
 import logger from './logger.js'
 import 'dotenv/config'
 import { Calculator } from './calcs/Calculator.js'
 import { AuthController } from './auth/AuthController.js'
 import { createClient } from 'redis'
 import RedisStore from 'connect-redis'
+import sideMenu from './sideMenu.json' assert {type: 'json'}
 
-let [sideMenu] = await Promise.all([
-    fs.promises.readFile('./sideMenu.json', 'utf8').then(JSON.parse)
-])
+
 const app = express()
 
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -22,9 +20,9 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something broke!')
 });
 // Настройка сессий
-let redisClient = createClient()
+export const redisClient = createClient()
 redisClient.connect().catch(console.error)
-let redisStore = new RedisStore({
+const redisStore = new RedisStore({
   client: redisClient,
   prefix: "columbCalc",
 })
@@ -33,7 +31,7 @@ app.use(session({
     secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 10000}
+    cookie: { maxAge: 500000}
 }));
 
 app.set('view engine', 'pug')
@@ -42,12 +40,14 @@ app.set('views', './views')
 app.get('/', (req, res) => {
     req.session.isAuthenticated ? res.render('layouts/main', {sideMenu}) : res.render('layouts/index')
 });
-const authController = new AuthController
-app.post('/login', async(req, res) => authController.login(req, res))
+const authController = new AuthController()
+
+app.post('/login', (req, res) => authController.login(req, res));
+
     
 const calculator = new Calculator()
 
-app.post('/selfcostupdate', (req, res) => calculator.updateSelfcost(req.body, res))
+app.post('/selfcostupdate', calculator.updateSelfcost)
 
 app.use(authController.authenticate)
 
@@ -61,11 +61,11 @@ app.get('/main/:calc', (req, res) => calculator.renderCalcs(req, res, sideMenu))
 
 app.post('/main/:calc', (req, res) => calculator.updateUserProps(req, res))
 
-app.post('/main/save/:calc', async (req, res) => calculator.saveHistory(req, res));
+app.post('/main/save/:calc', (req, res) => calculator.saveHistory(req, res));
 
-app.post('/main/del/:calc', async (req, res) => calculator.deleteHistory(req, res))
+app.post('/main/del/:calc',(req, res) =>  calculator.deleteHistory(req, res))
 
-app.post('/main/edit/:calc', async (req, res) => calculator.editHistory(req, res))
+app.post('/main/edit/:calc', (req, res) => calculator.editHistory(req, res))
 
 const PORT = process.env.PORT
 

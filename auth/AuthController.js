@@ -1,13 +1,14 @@
-import fs from 'fs'
+import { User } from '../db/db.js'
 import bcrypt from 'bcrypt'
 
 export class AuthController {
-    constructor(){
-        this.loadUsers()
-    }
     async login(req, res) {
         const { password, username } = req.body
-        const user = this.users.find(user => user.username === username)
+        const user = await User.findOne({
+            where: {
+                username: username
+            }
+        })
         
         if (!user) return res.render('layouts/index', { username, error: true })
 
@@ -23,13 +24,5 @@ export class AuthController {
     authenticate(req, res, next){
         if (req.session.isAuthenticated) return next()
         res.redirect('/')
-    }
-    async loadUsers(){
-        try{
-            this.users =  await fs.promises.readFile('./auth/users.json', 'utf8').then(JSON.parse)
-        }
-        catch(error){
-            console.error('Ошибка при загрузке users.json:', error)
-        }
     }
 }
