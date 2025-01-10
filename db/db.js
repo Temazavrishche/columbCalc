@@ -113,25 +113,4 @@ export const Product = sequelize.define('Product',{
   tableName: 'Ozon',
   timestamps: false,
 })
-await sequelize.sync({force: true})
-
-await Product.create({
-  offer_id: `ГМЗЕЛ-100`,
-  product_id: 743510658,
-  skladAssortmentId: "072d26ca-4499-11ed-0a80-075d00237aed"
-})
-/*await Product.create({
-  offer_id: `ГМСЕР-60`,
-  product_id: 283044471
-})*/
-await Product.create({
-  offer_id: `Након-1`,
-  product_id: 603430174,
-  skladAssortmentId: "d48c1b32-9879-11ed-0a80-101b0003a888"
-})
-
-await User.create({
-  username: 'Tema',
-  role: 'admin',
-  password: '$2b$10$AieF2yMLX0pH158mMY/htuqmBRm7fk.Y9NnKfhndmHB/PzRvLido6'
-})
+await sequelize.sync()
