@@ -74,9 +74,11 @@ export class Calculator{
             } else {
                 const userProps = await UserProps.findOne({
                     where: { user, type }
-                });
-                await redisClient.setEx(`${user}:${type}`, 3600, JSON.stringify(userProps.props));
-                return userProps.props || defaulProps[type];
+                })
+                if(userProps){
+                    await redisClient.setEx(`${user}:${type}`, 3600, JSON.stringify(userProps.props))
+                    return userProps.props
+                }else return defaulProps[type]
             }
         } catch (error) {
             console.error('Ошибка при получении UserProps:', error);

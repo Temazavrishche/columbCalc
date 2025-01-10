@@ -1,6 +1,6 @@
 import { Sequelize, DataTypes } from "sequelize"
 
-const sequelize = new Sequelize('columb', 'postgres', process.env.DBPASSWORD,{
+export const sequelize = new Sequelize('columb', 'postgres', process.env.DBPASSWORD,{
     dialect: 'postgres',
     host: 'localhost',
     logging: false
@@ -55,33 +55,83 @@ export const History = sequelize.define("History", {
   
 
 export const UserProps = sequelize.define("UserProps", {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  user: {
+    type: DataTypes.STRING(25),
+    references: {
+      model: User,
+      key: "username",
     },
-    user: {
-      type: DataTypes.STRING(25),
-      references: {
-        model: User,
-        key: "username",
-      },
-      onDelete: "CASCADE",
+    onDelete: "CASCADE",
+  },
+  type: {
+    type: DataTypes.STRING(25),
+  },
+  props: {
+    type: DataTypes.JSON,
+  },
+}, {
+  tableName: "UserProps",
+  indexes: [
+    {
+      unique: true,
+      fields: ["user", "type"],
     },
-    type: {
-      type: DataTypes.STRING(25),
-    },
-    props: {
-      type: DataTypes.JSON,
-    },
-  }, {
-    tableName: "UserProps",
-    indexes: [
-      {
-        unique: true,
-        fields: ["user", "type"],
-      },
-    ],
-  });
-  
-await sequelize.sync()
+  ],
+});
+
+export const Product = sequelize.define('Product',{
+  offer_id: {
+    type: DataTypes.STRING,
+    primaryKey: true,
+    unique: true,
+    allowNull: false,
+  },
+  product_id: {
+    type: DataTypes.INTEGER,
+    unique: true,
+    allowNull: false,
+  },
+  quant_size: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1
+  },
+  warehouse_id: {
+    type: DataTypes.STRING(20),
+    defaultValue: `23524151071000`
+  },
+  skladAssortmentId: {
+    type: DataTypes.STRING(255),
+    unique: true,
+    allowNull: false,
+  },
+},{
+  tableName: 'Ozon',
+  timestamps: false,
+})
+await sequelize.sync({force: true})
+
+await Product.create({
+  offer_id: `ГМЗЕЛ-100`,
+  product_id: 743510658,
+  skladAssortmentId: "072d26ca-4499-11ed-0a80-075d00237aed"
+})
+/*await Product.create({
+  offer_id: `ГМСЕР-60`,
+  product_id: 283044471
+})*/
+await Product.create({
+  offer_id: `Након-1`,
+  product_id: 603430174,
+  skladAssortmentId: "d48c1b32-9879-11ed-0a80-101b0003a888"
+})
+
+await User.create({
+  username: 'Tema',
+  role: 'admin',
+  password: '$2b$10$AieF2yMLX0pH158mMY/htuqmBRm7fk.Y9NnKfhndmHB/PzRvLido6'
+})

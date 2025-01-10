@@ -11,7 +11,6 @@ export class AuthController {
         })
         
         if (!user) return res.render('layouts/index', { username, error: true })
-
         if (await bcrypt.compare(password, user.password)) {
             req.session.isAuthenticated = true
             req.session.userRole = user.role

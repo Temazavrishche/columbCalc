@@ -1,0 +1,70 @@
+extends ../layouts/main
+
+block ozon
+  .form-container
+    form(action="/ozon/addProduct", method="post")
+      .form-group
+        label(for="offer_id") offer_id:
+        input(type="text", name="offer_id", id="offer_id" required)
+      .form-group
+        label(for="offer_id") SKU:
+        input(type="text", name="product_id", id="product_id" required)
+      button(type="submit") Добавить продукт
+  .update-all-container
+    button(type="button", id="update-all") Обновить все
+    button(type="button", id="down-all") Сбросить все
+  table
+    thead
+      tr
+        th Offer ID
+        th SKU
+        th skladAssortmentId
+        th Удалить
+    tbody
+      each product in products
+        tr
+          td= product.offer_id
+          td= product.product_id
+          td= product.skladAssortmentId
+          td
+            form(action="/ozon/deleteProduct", method="post")
+              input(type="hidden", name="offer_id", value=product.offer_id)
+              button(type="submit") Удалить
+
+  script.
+    const updateButton = document.getElementById('update-all');
+    updateButton.addEventListener('click', function() {
+      fetch('/ozon/updateAllProducts', {
+        method: 'POST'
+      })
+      .then(data => {
+        console.log(data)
+        if (data.status == 200) {
+          alert('Данные успешно обновлены');
+        } else {
+          alert('Произошла ошибка');
+        }
+      })
+      .catch(error => {
+        alert('Произошла ошибка');
+        console.error('Ошибка:', error);
+      });
+    });
+    const downButton = document.getElementById('down-all');
+    downButton.addEventListener('click', function() {
+      fetch('/ozon/downAll', {
+        method: 'POST'
+      })
+      .then(data => {
+        console.log(data)
+        if (data.status == 200) {
+          alert('Данные успешно обновлены');
+        } else {
+          alert('Произошла ошибка');
+        }
+      })
+      .catch(error => {
+        alert('Произошла ошибка');
+        console.error('Ошибка:', error);
+      });
+    });

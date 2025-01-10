@@ -15,12 +15,13 @@ html(lang="ru")
             each item in sideMenu
               li
                 button.side-menu-list-item-btn(class=(item.filename === current ? 'active' : ''))
-                  a(href=`/main/${item.filename}`)= item.title
+                  a(href=`/${item.filename}`)= item.title
       .content-wrapper
         .main-content
           block ballons
           block mattress
           block fbort
+          block ozon
         .result-history
           .result
             include result

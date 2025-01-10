@@ -8,6 +8,7 @@ import { AuthController } from './auth/AuthController.js'
 import { createClient } from 'redis'
 import RedisStore from 'connect-redis'
 import sideMenu from './sideMenu.json' assert {type: 'json'}
+import { OzonController } from './ozon/OzonController.js'
 
 
 const app = express()
@@ -46,8 +47,12 @@ app.post('/login', (req, res) => authController.login(req, res));
 
     
 const calculator = new Calculator()
-
+const ozon = new OzonController()
 app.post('/selfcostupdate', calculator.updateSelfcost)
+
+app.post('/changeFromSklad', (req, res) => ozon.hookUpdateStockOzon(req, res))
+app.post('/changeFromOzon', (req, res) => ozon.ozonHook(req, res))
+app.post('/massChangeOzon', (req, res) => ozon.massUpdateOzon(req, res))
 
 app.use(authController.authenticate)
 
@@ -55,17 +60,21 @@ app.use((req, res, next) => {
     logger.info(`${req.method} ${req.url} ${req.session.userId}`)
     next();
 });
+app.get('/ozon', (req, res) => ozon.renderOzon(req, res, sideMenu))
+
+app.post('/ozon/:action', (req, res) => ozon[req.params.action](req, res))
+
 app.get('/main', (req, res) => res.render('layouts/main', {sideMenu}))
 
-app.get('/main/:calc', (req, res) => calculator.renderCalcs(req, res, sideMenu))
+app.get('/:calc', (req, res) => calculator.renderCalcs(req, res, sideMenu))
 
-app.post('/main/:calc', (req, res) => calculator.updateUserProps(req, res))
+app.post('/:calc', (req, res) => calculator.updateUserProps(req, res))
 
-app.post('/main/save/:calc', (req, res) => calculator.saveHistory(req, res));
+app.post('/save/:calc', (req, res) => calculator.saveHistory(req, res));
 
-app.post('/main/del/:calc',(req, res) =>  calculator.deleteHistory(req, res))
+app.post('/del/:calc',(req, res) =>  calculator.deleteHistory(req, res))
 
-app.post('/main/edit/:calc', (req, res) => calculator.editHistory(req, res))
+app.post('/edit/:calc', (req, res) => calculator.editHistory(req, res))
 
 const PORT = process.env.PORT
 
