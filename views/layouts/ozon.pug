@@ -13,12 +13,17 @@ block ozon
   .update-all-container
     button(type="button", id="update-all") Обновить все
     button(type="button", id="down-all") Сбросить все
+    button(type="button", id="sync-all") Синхронизировать товары на озоне
+    h3 Всего позиций: #{Object.values(products).length}
   table
     thead
       tr
         th Offer ID
         th SKU
         th skladAssortmentId
+        th bundle
+        th update?
+        th Убрать обновление
         th Удалить
     tbody
       each product in products
@@ -26,6 +31,13 @@ block ozon
           td= product.offer_id
           td= product.product_id
           td= product.skladAssortmentId
+          td= product.bundle
+          td= product.update
+          td
+            form(action="/ozon/toggleUpdate", method="post")
+              input(type="hidden", name="offer_id", value=product.offer_id, update=product.update)
+              input(type="hidden", name="update", value=String(product.update))
+              button(type="submit") Изменить обновление
           td
             form(action="/ozon/deleteProduct", method="post")
               input(type="hidden", name="offer_id", value=product.offer_id)
@@ -59,6 +71,25 @@ block ozon
         console.log(data)
         if (data.status == 200) {
           alert('Данные успешно обновлены');
+        } else {
+          alert('Произошла ошибка');
+        }
+      })
+      .catch(error => {
+        alert('Произошла ошибка');
+        console.error('Ошибка:', error);
+      });
+    });
+
+    const syncButton = document.getElementById('sync-all');
+    syncButton.addEventListener('click', function() {
+      fetch('/ozon/syncProductsFromOzon', {
+        method: 'POST'
+      })
+      .then(data => {
+        console.log(data)
+        if (data.status == 200) {
+          alert('Данные успешно синхронизированы');
         } else {
           alert('Произошла ошибка');
         }

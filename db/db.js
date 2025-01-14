@@ -109,8 +109,22 @@ export const Product = sequelize.define('Product',{
     unique: true,
     allowNull: false,
   },
+  bundle: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false
+  },
+  update: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  }
 },{
   tableName: 'Ozon',
   timestamps: false,
 })
-await sequelize.sync()
+await sequelize.sync({force: true})
+
+await User.create({
+  username: 'Tema',
+  role: 'admin',
+  password: '$2b$10$AieF2yMLX0pH158mMY/htuqmBRm7fk.Y9NnKfhndmHB/PzRvLido6'
+})

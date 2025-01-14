@@ -48,12 +48,13 @@ app.post('/login', (req, res) => authController.login(req, res));
     
 const calculator = new Calculator()
 const ozon = new OzonController()
+
+setTimeout(() => ozon.updateAllProducts(), 3_600_000)
 app.post('/selfcostupdate', calculator.updateSelfcost)
 
 app.post('/changeFromSklad', (req, res) => ozon.hookUpdateStockOzon(req, res))
 app.post('/changeFromOzon', (req, res) => ozon.ozonHook(req, res))
 app.post('/massChangeOzon', (req, res) => ozon.massUpdateOzon(req, res))
-
 app.use(authController.authenticate)
 
 app.use((req, res, next) => {

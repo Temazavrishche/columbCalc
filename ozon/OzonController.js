@@ -8,7 +8,7 @@ const skladHeaders = {
 }}
 
 export class OzonController{
-    async hookUpdateStockOzon(req, res){
+    /*async hookUpdateStockOzon(req, res){
         try{
             const obj = {}
             const changedProducts = await axios.get(req.body.reportUrl + '&stockType=quantity', skladHeaders)
@@ -28,14 +28,15 @@ export class OzonController{
                 obj[el.skladAssortmentId] = Object.assign(obj[el.skladAssortmentId], el.toJSON())
                 delete obj[el.skladAssortmentId].skladAssortmentId
             })
-            await doUpdateOzon(Object.values(obj))
+            updateOzonHeap = updateOzonHeap.concat(Object.values(data))
+            doUpdateStockOzon()
             res.sendStatus(200)
         }catch(error){
             console.error('Ошибка при получении ozon:', error);
             logger.error(`Error: ${error}`);
             res.sendStatus(500)
         }
-    }
+    }*/
     async renderOzon(req, res, sideMenu){
         try{
             const data = await Product.findAll()
@@ -57,7 +58,8 @@ export class OzonController{
                 temp.stock = 0
                 return temp
             })
-            await doUpdateOzon(result)
+            updateOzonHeap = updateOzonHeap.concat(result)
+            doUpdateStockOzon()
             res.sendStatus(200)
         }
         catch(error){
@@ -68,33 +70,50 @@ export class OzonController{
     }
     async updateAllProducts(req, res){
         try{
-            const data = await Product.findAll({attributes: ['offer_id', 'product_id', 'quant_size', 'warehouse_id', 'skladAssortmentId']})
-            const skladReport = await axios.get('https://api.moysklad.ru/api/remap/1.2/report/stock/all', skladHeaders)
-            const map = new Map()
-            skladReport.data.rows.forEach(el => map.set(el.code, el.quantity < 0 ? 0 : el.quantity)) //Иногда количество может быть отрицательным если резерв больше стока
-            const result = await Promise.all(data.map(async el => {
-                const temp = el.toJSON()
-                if(map.get(temp.offer_id))
-                    temp.stock = map.get(temp.offer_id)
-                else { //Если в отчете нет товара, то это бандл, его нужно считать вручную по компонентам
-                    const quantityInBundle = {}
-                    const assortmentQuantity = await axios.get(`https://api.moysklad.ru/api/remap/1.2/entity/bundle/${el.skladAssortmentId}/components`,skladHeaders)
-                    .then(async el => {
-                        return await axios.get(`https://api.moysklad.ru/api/remap/1.2/report/stock/all/current?stockType=quantity&include=zeroLines&filter=assortmentId=${el.data.rows.map(assortment => {
-                            const id = assortment.assortment.meta.href.match(/\/([a-f0-9\-]{36})$/)?.[1]
-                            quantityInBundle[id] = assortment.quantity
-                            return id
-                        }).join(',')}`, skladHeaders)
-                    })
-                    temp.stock = Math.floor(Math.min(...assortmentQuantity.data.map(el => el.quantity / quantityInBundle[el.assortmentId])))
+            const dataForBundle = await Product.findAll({attributes: ['offer_id', 'product_id', 'quant_size', 'warehouse_id'], where: {bundle: true, update: true}})
+            const temp = {}
+            dataForBundle.forEach(el => {
+                temp[el.offer_id] = el.toJSON()
+                temp[el.offer_id].stock = {}
+            })
+            const dataForBundleFromSklad = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/bundle?expand=components.assortment&limit=100&filter=code=${dataForBundle.map(el => el.offer_id).join(';code=')}`, 'get')
+            const promises = await Promise.all(dataForBundleFromSklad.rows.map(product => doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/assortment/?filter=code=${product.components.rows.map(el => {
+                temp[product.code].stock[el.assortment.code] = el.quantity
+                return el.assortment.code
+            }).join(';code=')}`, 'get')))
+            const skladQuantity = {}
+            promises.forEach(el => el.rows.forEach(el => skladQuantity[el.code] = el.quantity))
+            for(const key in temp){
+                let min = Infinity
+                for(const key2 in temp[key].stock){
+                    min = Math.floor(Math.min(min, skladQuantity[key2] / temp[key].stock[key2]))
                 }
-                return temp
-            }))
-            await doUpdateOzon(result)
-            res.sendStatus(200)
-        }
-        catch(error){
-            console.error('Ошибка при обновлении всех товаров', error);
+                temp[key].stock = min < 0 ? 0 : min
+            }
+
+            const data = await Product.findAll({attributes: ['offer_id', 'product_id', 'quant_size', 'warehouse_id'], where: {bundle: false, update: true}})
+            data.forEach(el => {
+                temp[el.offer_id] = el.toJSON()
+                temp[el.offer_id].stock = {}
+            })
+            const dataFromSklad = []
+            for(let i = 0; i < data.length; i += 50){
+                dataFromSklad.push(doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/assortment/?filter=code=${data.slice(i, i + 50).map(el => {
+                    temp[el.offer_id] = el.toJSON()
+                    return el.offer_id
+                }).join(';code=')}`, 'get'))
+            }
+            const promises2 = await Promise.all(dataFromSklad)
+            promises2.forEach(el => {
+                el.rows.forEach(el => {
+                    temp[el.code].stock = el.quantity < 0 ? 0 : el.quantity
+                })
+            })
+            updateOzonHeap = updateOzonHeap.concat(Object.values(temp))
+            doUpdateStockOzon()
+            res && res.sendStatus(200)
+        }catch(error){
+            console.error('Ошибка при обновлении ozon:', error);
             logger.error(`Error: ${error}`);
             res.sendStatus(500)
         }
@@ -123,7 +142,8 @@ export class OzonController{
             await Product.create({
                 offer_id: req.body.offer_id,
                 product_id: req.body.product_id,
-                skladAssortmentId: skladData.data.rows[0].id
+                skladAssortmentId: skladData.data.rows[0].id,
+                bundle: skladData.data.rows[0].meta.type == 'bundle' ? true : false
             })
             res.redirect('/ozon')
         }catch(error){
@@ -132,7 +152,6 @@ export class OzonController{
             res.status(500).redirect('/ozon')
         }
     }
-
     async ozonHook(req, res){
         const mapping = {
             'TYPE_PING': type_ping,
@@ -140,6 +159,66 @@ export class OzonController{
             'TYPE_POSTING_CANCELLED': new_or_cancelled
         }
         await mapping[req.body.message_type](req,res)
+    }
+    async syncProductsFromOzon(req, res){
+        try{
+            const allProductsOnOzon = await axios.post('https://api-seller.ozon.ru/v3/product/list',{
+                "filter": {
+                    "offer_id": [],
+                    "product_id": [],
+                    "visibility": "ALL"
+                },
+                "last_id": "",
+                "limit": 1000
+            }, ozonHeaders)
+            const obj = {}
+            allProductsOnOzon.data.result.items.forEach(el => obj[el.offer_id] = {offer_id: el.offer_id, product_id: el.product_id})
+            for(let i = 0; i < allProductsOnOzon.data.result.items.length; i += 50){
+                const response = await axios.get(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?filter=code=${allProductsOnOzon.data.result.items.map(el => el.offer_id).slice(i, i + 50).join(';code=')}`,skladHeaders)
+                response.data.rows.forEach(el => {
+                    obj[el.code].skladAssortmentId = el.id
+                    obj[el.code].type = el.meta.type
+                })
+            }
+            const errors = []
+            Object.values(obj).forEach(async el => {
+                try{
+                    await Product.create({
+                        offer_id: el.offer_id,
+                        product_id: el.product_id,
+                        skladAssortmentId: el.skladAssortmentId,
+                        bundle: el.type == 'bundle' ? true : false
+                    })
+                }catch(error){
+                    errors.push(error)
+                }
+            })
+            res.status(200).send({
+                errors: errors
+            })
+        }catch(error){
+            console.error('Ошибка при добавлении ozon:', error);
+            logger.error(`Error: ${error}`);
+            res.sendStatus(500)
+        }
+    }
+    async toggleUpdate(req, res){
+        try{
+            const test = await Product.update({
+                update: req.body.update === 'true' ? false : true
+            },{
+                where: {
+                    offer_id: req.body.offer_id
+                }
+            })
+            console.log(test)
+            res.redirect('/ozon')
+        }
+        catch(error){
+            console.error('Ошибка при обновлении всех товаров', error);
+            logger.error(`Error: ${error}`);
+            res.sendStatus(500)
+        }
     }
 }
 
@@ -176,7 +255,7 @@ const new_or_cancelled = async (req, res) => {
                         product_id: el.sku
                     }
                 })
-                const posInfo = await axios.get(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?filter=code=${data.offer_id}`, skladHeaders).then(el => el.data.rows[0])
+                const posInfo = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?filter=code=${data.offer_id}`, 'get').then(el => el.rows[0])
                 if(!posInfo.components)
                     return {
                         quantity: el.quantity,
@@ -186,9 +265,9 @@ const new_or_cancelled = async (req, res) => {
                         price: posInfo.salePrices[0].value
                     }
                 else{
-                    const componentsInfo = await axios.get(posInfo.components.meta.href, skladHeaders)
+                    const componentsInfo = await doSkladReq(posInfo.components.meta.href, 'get')
                     return await Promise.all(componentsInfo.data.rows.map(async component => {
-                        const metaInfo = await axios.get(component.assortment.meta.href, skladHeaders)
+                        const metaInfo = await doSkladReq(component.assortment.meta.href, 'get')
                         return {
                             quantity: component.quantity * el.quantity,
                             assortment: {
@@ -223,8 +302,12 @@ const new_or_cancelled = async (req, res) => {
                     "mediaType" : "application/json",
                 }
             }
-            const response = await axios.post(`https://api.moysklad.ru/api/remap/1.2/entity/demand`, args, skladHeaders)
+            const response = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/demand`, 'post', args)
         }else{
+            if(req.body.warehouse_id != 23524151071000){
+                res.status(200).send({result: true})
+                return
+            }
             args.state = {
                 "meta": {
                     "href" : "https://api.moysklad.ru/api/remap/1.2/entity/enter/metadata/states/138e167d-682f-11ee-0a80-054f00100492",
@@ -233,7 +316,7 @@ const new_or_cancelled = async (req, res) => {
                     "mediaType" : "application/json"
                   }
             }
-            const response = await axios.post(`https://api.moysklad.ru/api/remap/1.2/entity/enter`, args, skladHeaders)
+            const response = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/enter`, 'post', args)
         }
         res.status(200).send({result: true})
     }catch(error){
@@ -248,25 +331,67 @@ const new_or_cancelled = async (req, res) => {
          })
     }
 }
-
-const doUpdateOzon = async (data) => {
-    const ozonUrl = `https://api-seller.ozon.ru/v2/products/stocks`
-    for(let i = 0; i < data.length; i += 100){
-        const response = await axios.post(
-            ozonUrl,
-            {
-                stocks: data.slice(i, i + 100),
-            },
-            {
-                headers: {
-                    "Client-Id": process.env.OZONCLIENTID,
-                    "Api-Key": process.env.OZONAPIKEY
-                }
-            }
-        )
-        response.data.result.find(el => {
-            if(el.errors.length > 0)
-                throw new Error()
-        })
+const ozonHeaders = {
+    headers: {
+        "Client-Id": process.env.OZONCLIENTID,
+        "Api-Key": process.env.OZONAPIKEY
     }
 }
+
+let canUpdateStock = true
+let updateOzonHeap = []
+const doUpdateStockOzon = async () => {
+    while (!canUpdateStock) {
+        await sleep(1000)
+    }
+    if(updateOzonHeap.length < 1) return
+    const data = updateOzonHeap.splice(0, 90)
+    canUpdateStock = false
+    setTimeout(() => canUpdateStock = true, 30_000)
+    const response = await axios.post(`https://api-seller.ozon.ru/v2/products/stocks`, {
+        stocks: data
+    }, ozonHeaders)
+    if(response.data.message == 'TOO_MANY_REQUESTS'){
+        updateOzonHeap = updateOzonHeap.concat(data)
+        doUpdateStockOzon()
+    }
+    response.data.result.forEach(el => {
+        !el.updated &&updateOzonHeap.push({warehouse_id: el.warehouse_id, product_id: el.product_id, quant_size: el.quant_size, offer_id: el.offer_id, stock: data.find(dataEl => dataEl.offer_id == el.offer_id).stock})
+    })
+    if(updateOzonHeap.length > 0) doUpdateStockOzon()
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+function skladCounter() {
+    skladReqCounter++
+    setTimeout(() => skladReqCounter--, 3000)
+}
+
+
+let skladReqCounter = 0
+const skladReqQueue = new Set()
+
+async function doSkladReq(url, type, data){
+    const canMakeRequest = () => {
+        if (skladReqQueue.size >= 5) return false
+        if (skladReqCounter >= 40) return false
+        return true;
+    }
+    while (!canMakeRequest()) {
+        await sleep(300)
+    }
+
+    skladCounter()
+    const options = data ? [url, data, skladHeaders] : [url, skladHeaders]
+    const response = axios[type](...options)
+        .then(res => res.data)
+        .finally(() => {
+            skladReqQueue.delete(response)
+        });
+    
+    skladReqQueue.add(response)
+    
+    return response;
+};
