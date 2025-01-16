@@ -61,10 +61,15 @@ export class OzonController{
             updateOzonHeap = updateOzonHeap.concat(result)
             doUpdateStockOzon()
             res.sendStatus(200)
-        }
-        catch(error){
-            console.error('Ошибка при обновлении всех товаров', error);
-            logger.error(`Error: ${error}`);
+        }catch(error){
+            const functionName = 'downAll'
+            const additionalInfo = {
+                functionName,
+                stack: error.stack,
+                message: error.message,
+            };
+            console.error(`Ошибка в ${functionName}:`, error)
+            logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
             res.sendStatus(500)
         }
     }
@@ -113,8 +118,14 @@ export class OzonController{
             doUpdateStockOzon()
             res && res.sendStatus(200)
         }catch(error){
-            console.error('Ошибка при обновлении ozon:', error);
-            logger.error(`Error: ${error}`);
+            const functionName = 'updateAllProducts'
+            const additionalInfo = {
+                functionName,
+                stack: error.stack,
+                message: error.message,
+            };
+            console.error(`Ошибка в ${functionName}:`, error)
+            logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
             res.sendStatus(500)
         }
     }
@@ -127,8 +138,14 @@ export class OzonController{
             })
             res.redirect('/ozon')
         }catch(error){
-            console.error('Ошибка при удалении ozon:', error);
-            logger.error(`Error: ${error}`);
+            const functionName = 'deleteProduct'
+            const additionalInfo = {
+                functionName,
+                stack: error.stack,
+                message: error.message,
+            };
+            console.error(`Ошибка в ${functionName}:`, error)
+            logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
             res.sendStatus(500)
         }
     }
@@ -147,9 +164,15 @@ export class OzonController{
             })
             res.redirect('/ozon')
         }catch(error){
-            console.error('Ошибка при добавлении ozon:', error);
-            logger.error(`Error: ${error}`);
-            res.status(500).redirect('/ozon')
+            const functionName = 'addProduct'
+            const additionalInfo = {
+                functionName,
+                stack: error.stack,
+                message: error.message,
+            };
+            console.error(`Ошибка в ${functionName}:`, error)
+            logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
+            res.sendStatus(500).redirect('/ozon')
         }
     }
     async ozonHook(req, res){
@@ -171,8 +194,14 @@ export class OzonController{
                 "last_id": "",
                 "limit": 1000
             }, ozonHeaders)
+            const SKUs = await axios.post(`https://api-seller.ozon.ru/v3/product/info/list`,{
+                "offer_id": [],
+                "product_id": allProductsOnOzon.data.result.items.map(el => el.product_id),
+                "sku": []
+                }, ozonHeaders)
             const obj = {}
             allProductsOnOzon.data.result.items.forEach(el => obj[el.offer_id] = {offer_id: el.offer_id, product_id: el.product_id})
+            SKUs.data.items.forEach(el => obj[el.offer_id].sku = el.sources[0].sku)
             for(let i = 0; i < allProductsOnOzon.data.result.items.length; i += 50){
                 const response = await axios.get(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?filter=code=${allProductsOnOzon.data.result.items.map(el => el.offer_id).slice(i, i + 50).join(';code=')}`,skladHeaders)
                 response.data.rows.forEach(el => {
@@ -187,31 +216,35 @@ export class OzonController{
                         offer_id: el.offer_id,
                         product_id: el.product_id,
                         skladAssortmentId: el.skladAssortmentId,
+                        SKU: el.sku,
                         bundle: el.type == 'bundle' ? true : false
                     })
                 }catch(error){
                     errors.push(error)
                 }
             })
-            res.status(200).send({
-                errors: errors
-            })
+            res.status(200).redirect('/ozon')
         }catch(error){
-            console.error('Ошибка при добавлении ozon:', error);
-            logger.error(`Error: ${error}`);
+            const functionName = 'syncProductsFromOzon'
+            const additionalInfo = {
+                functionName,
+                stack: error.stack,
+                message: error.message,
+            };
+            console.error(`Ошибка в ${functionName}:`, error)
+            logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
             res.sendStatus(500)
         }
     }
     async toggleUpdate(req, res){
         try{
-            const test = await Product.update({
+            await Product.update({
                 update: req.body.update === 'true' ? false : true
             },{
                 where: {
                     offer_id: req.body.offer_id
                 }
             })
-            console.log(test)
             res.redirect('/ozon')
         }
         catch(error){
@@ -250,12 +283,12 @@ const new_or_cancelled = async (req, res) => {
             },
             "positions": await Promise.all(newOrders.map(async el => {
                 const data = await Product.findOne({
-                    attributes: ['offer_id'],
+                    attributes: ['offer_id', 'bundle'],
                     where: {
-                        product_id: el.sku
+                        SKU: el.sku
                     }
                 })
-                const posInfo = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?filter=code=${data.offer_id}`, 'get').then(el => el.rows[0])
+                const posInfo = await doSkladReq(`https://api.moysklad.ru/api/remap/1.2/entity/assortment?expand=components.assortment&limit=100&filter=code=${data.offer_id}`, 'get').then(el => el.rows[0])
                 if(!posInfo.components)
                     return {
                         quantity: el.quantity,
@@ -264,19 +297,16 @@ const new_or_cancelled = async (req, res) => {
                         },
                         price: posInfo.salePrices[0].value
                     }
-                else{
-                    const componentsInfo = await doSkladReq(posInfo.components.meta.href, 'get')
-                    return await Promise.all(componentsInfo.data.rows.map(async component => {
-                        const metaInfo = await doSkladReq(component.assortment.meta.href, 'get')
+                else
+                    return posInfo.components.rows.map(component => {
                         return {
                             quantity: component.quantity * el.quantity,
                             assortment: {
-                                meta: metaInfo.data.meta
+                                meta: component.assortment.meta
                             },
-                            price: metaInfo.data.salePrices[0].value
+                            price: component.assortment.salePrices[0].value
                         }
-                    }))
-                }
+                    })
             })).then(el => el.flat()),
             "description": `This document created automatically with API, it belongs to order with posting number ${req.body.posting_number}`
         }
@@ -320,8 +350,14 @@ const new_or_cancelled = async (req, res) => {
         }
         res.status(200).send({result: true})
     }catch(error){
-        console.error('Ошибка при создании документа в MoySklad:', error);
-        logger.error(`Error: ${error}`);
+        const functionName = 'new_or_cancelled'
+        const additionalInfo = {
+            functionName,
+            stack: error.stack,
+            message: error.message,
+        };
+        console.error(`Ошибка в ${functionName}:`, error)
+        logger.error(`Error in ${functionName}: ${error.message}`, additionalInfo)
         res.status(500).send({
             "error": {
                "code": "ERROR",

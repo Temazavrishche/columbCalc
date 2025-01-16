@@ -96,6 +96,11 @@ export const Product = sequelize.define('Product',{
     unique: true,
     allowNull: false,
   },
+  SKU: {
+    type: DataTypes.INTEGER,
+    unique: true,
+    allowNull: false
+  },
   quant_size: {
     type: DataTypes.INTEGER,
     defaultValue: 1
